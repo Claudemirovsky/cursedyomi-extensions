@@ -1,6 +1,6 @@
 | Build | Codefactor grade |
 |-------|---------|
-| ![CI](https://github.com/Claudemirovsky/cursedyomi-extensions/workflows/CI/badge.svg?event=push) | ![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/Claudemirovsky/cursedyomi-extensions?style=flat) |
+| ![CI](https://github.com/Claudemirovsky/cursedyomi-extensions/workflows/CI/badge.svg?event=push) |[![CodeFactor](https://www.codefactor.io/repository/github/claudemirovsky/cursedyomi-extensions/badge)](https://www.codefactor.io/repository/github/claudemirovsky/cursedyomi-extensions)|
 
 # ![app icon](./.github/readme-images/app-icon.png)Aniyomi Extensions
 Aniyomi is a free and open source manga reader for Android 6.0 and above.
