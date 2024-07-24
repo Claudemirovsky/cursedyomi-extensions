@@ -69,6 +69,7 @@ class TRAnimeCI : AnimeStream(
             .addIfNotBlank("season[]", params.season)
             .addIfNotBlank("format[]", params.type)
             .addIfNotBlank("studio[]", params.studio)
+            .addIfNotBlank("name", query)
             .build()
 
         return GET(url.toString(), headers)
