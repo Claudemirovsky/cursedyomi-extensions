@@ -100,6 +100,7 @@ class TRAnimeCI : AnimeStream(
     // =========================== Anime Details ============================
     override val animeDetailsSelector = "div.infox"
     override val animeStatusText = "Durum"
+    override val animeTitleSelector = ".entry-title"
 
     override fun parseStatus(statusString: String?): Int {
         return when (statusString?.trim()?.lowercase()) {
