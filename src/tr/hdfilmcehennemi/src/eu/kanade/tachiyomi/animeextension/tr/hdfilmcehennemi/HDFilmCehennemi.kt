@@ -26,6 +26,7 @@ import okhttp3.FormBody
 import okhttp3.MultipartBody
 import okhttp3.Request
 import okhttp3.Response
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import uy.kohesive.injekt.Injekt
@@ -47,18 +48,29 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
         .add("Referer", "$baseUrl/")
         .add("Origin", baseUrl)
 
+    private val apiHeaders = headersBuilder().add("X-Requested-With", "fetch").build()
+
     private val preferences by lazy {
         Injekt.get<Application>().getSharedPreferences("source_$id", 0x0000)
     }
 
     // ============================== Popular ===============================
-    override fun popularAnimeRequest(page: Int) = GET("$baseUrl/en-cok-begenilen-filmleri-izle/page/$page/")
+    override fun popularAnimeRequest(page: Int) =
+        GET("$baseUrl/load/page/$page/mostLiked/", apiHeaders)
 
-    override fun popularAnimeSelector() = "div.row div.poster > a"
+    override fun popularAnimeParse(response: Response): AnimesPage {
+        val data = response.parseAs<ApiResponse>()
+        val doc = Jsoup.parse(data.html)
+        val itens = doc.select(popularAnimeSelector()).map(::popularAnimeFromElement)
+
+        return AnimesPage(itens, itens.size >= 28)
+    }
+
+    override fun popularAnimeSelector() = "a.poster"
 
     override fun popularAnimeFromElement(element: Element) = SAnime.create().apply {
         setUrlWithoutDomain(element.attr("href"))
-        title = element.selectFirst("h2.title")!!.text()
+        title = element.selectFirst("strong.poster-title")!!.text()
         thumbnail_url = element.selectFirst("img")?.absUrl("data-src")
     }
 
@@ -292,6 +304,9 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
         return runCatching { DATE_FORMATTER.parse(trim())?.time }
             .getOrNull() ?: 0L
     }
+
+    @Serializable
+    private class ApiResponse(val html: String)
 
     companion object {
         const val PREFIX_SEARCH = "id:"
