@@ -46,10 +46,6 @@ class BetterAnime : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
 
     override val supportsLatest = true
 
-    override val client = network.client.newBuilder()
-        .addInterceptor(LoginInterceptor(network.client, baseUrl, headers))
-        .build()
-
     private val json: Json by injectLazy()
 
     private val preferences by lazy {
