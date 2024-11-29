@@ -19,7 +19,7 @@ class BetterAnimeExtractor(
     private val json: Json,
 ) {
 
-    private val headers = Headers.headersOf("Referer", baseUrl)
+    private val headers = Headers.headersOf("Referer", "$baseUrl/", "Origin", baseUrl)
 
     fun videoListFromHtml(html: String): List<Video> {
         val qualities = REGEX_QUALITIES.findAll(html).map {
@@ -28,7 +28,7 @@ class BetterAnimeExtractor(
         val token = html.substringAfter("_token:\"").substringBefore("\"")
         return qualities.parallelMapNotNullBlocking { (quality, qtoken) ->
             videoUrlFromToken(qtoken, token)?.let { videoUrl ->
-                Video(videoUrl, quality, videoUrl)
+                Video(videoUrl, quality, videoUrl, headers)
             }
         }
     }
