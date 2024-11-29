@@ -223,7 +223,7 @@ class BetterAnime : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     }
 
     // ============================ Video Links =============================
-    private val extractor by lazy { BetterAnimeExtractor(client, baseUrl, json) }
+    private val extractor by lazy { BetterAnimeExtractor(client, baseUrl) }
 
     override fun videoListParse(response: Response): List<Video> {
         val html = response.body.string()
