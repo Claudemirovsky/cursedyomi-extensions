@@ -37,7 +37,7 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
 
     override val name = "HDFilmCehennemi"
 
-    override val baseUrl = "https://www.hdfilmcehennemi.us"
+    override val baseUrl = "https://www.hdfilmcehennemi.nl"
 
     override val lang = "tr"
 
