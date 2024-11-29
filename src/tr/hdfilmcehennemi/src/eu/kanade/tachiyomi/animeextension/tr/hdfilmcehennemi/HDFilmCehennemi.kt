@@ -77,7 +77,9 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     override fun popularAnimeNextPageSelector() = "ul.pagination > li > a[rel=next]"
 
     // =============================== Latest ===============================
-    override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/page/$page/")
+    override fun latestUpdatesRequest(page: Int) = GET("$baseUrl/load/page/$page/home/", apiHeaders)
+
+    override fun latestUpdatesParse(response: Response) = popularAnimeParse(response)
 
     override fun latestUpdatesSelector() = popularAnimeSelector()
 
