@@ -70,8 +70,10 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
 
     override fun popularAnimeFromElement(element: Element) = SAnime.create().apply {
         setUrlWithoutDomain(element.attr("href"))
-        title = element.selectFirst("strong.poster-title")!!.text()
-        thumbnail_url = element.selectFirst("img")?.absUrl("data-src")
+        title = element.selectFirst("strong.poster-title, h4.title")!!.text()
+        thumbnail_url = element.selectFirst("img")?.run {
+            absUrl("data-src").ifBlank { absUrl("src") }
+        }
     }
 
     override fun popularAnimeNextPageSelector() = "ul.pagination > li > a[rel=next]"
@@ -111,15 +113,11 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     }
 
     override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
-        val headers = headersBuilder()
-            .add("X-Requested-With", "XMLHttpRequest")
-            .build()
-
         return when {
             query.isNotBlank() -> {
                 val body = FormBody.Builder().add("query", query).build()
 
-                POST("$baseUrl/search/", headers, body)
+                POST("$baseUrl/search", apiHeaders, body)
             }
             else -> {
                 val params = HDFilmCehennemiFilters.getSearchParameters(filters)
@@ -140,25 +138,18 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     }
 
     @Serializable
-    data class SearchResponse(val result: List<ItemDto>)
-
-    @Serializable
-    data class ItemDto(val title: String, val poster: String, val slug: String, val slug_prefix: String)
+    data class SearchResponse(val results: List<String>)
 
     @Serializable
     data class FilterSearchResponse(val html: String, val showMore: Boolean, val status: Int)
 
     override fun searchAnimeParse(response: Response): AnimesPage {
         return when {
-            response.request.url.toString().contains("/search/") -> { // Text search
+            response.request.url.toString().contains("/search") -> { // Text search
                 val data = response.parseAs<SearchResponse>()
-                val items = data.result.map {
-                    SAnime.create().apply {
-                        title = it.title
-                        thumbnail_url = "$baseUrl/uploads/poster/" + it.poster
-                        url = "/" + it.slug_prefix + it.slug
-                    }
-                }
+                val items = data.results.mapNotNull {
+                    Jsoup.parse(it).selectFirst("a[href]")
+                }.map(::popularAnimeFromElement)
 
                 AnimesPage(items, false)
             }
