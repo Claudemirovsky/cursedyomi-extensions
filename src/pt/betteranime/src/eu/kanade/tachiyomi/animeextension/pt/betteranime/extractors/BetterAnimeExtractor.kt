@@ -7,7 +7,7 @@ import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.POST
 import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.util.parallelMapNotNullBlocking
-import kotlinx.serialization.json.Json
+import eu.kanade.tachiyomi.util.parseAs
 import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -16,10 +16,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class BetterAnimeExtractor(
     private val client: OkHttpClient,
     private val baseUrl: String,
-    private val json: Json,
 ) {
 
-    private val headers = Headers.headersOf("Referer", baseUrl)
+    private val headers = Headers.headersOf("Referer", "$baseUrl/", "Origin", baseUrl)
 
     fun videoListFromHtml(html: String): List<Video> {
         val qualities = REGEX_QUALITIES.findAll(html).map {
@@ -28,7 +27,7 @@ class BetterAnimeExtractor(
         val token = html.substringAfter("_token:\"").substringBefore("\"")
         return qualities.parallelMapNotNullBlocking { (quality, qtoken) ->
             videoUrlFromToken(qtoken, token)?.let { videoUrl ->
-                Video(videoUrl, quality, videoUrl)
+                Video(videoUrl, quality, videoUrl, headers)
             }
         }
     }
@@ -43,8 +42,8 @@ class BetterAnimeExtractor(
         val reqBody = body.toRequestBody("application/json".toMediaType())
         val request = POST("$baseUrl/changePlayer", headers, reqBody)
         return runCatching {
-            val response = client.newCall(request).await().body.string()
-            val resJson = json.decodeFromString<ChangePlayerDto>(response)
+            val response = client.newCall(request).await()
+            val resJson = response.parseAs<ChangePlayerDto>()
             videoUrlFromPlayer(resJson.frameLink!!)
         }.getOrNull()
     }

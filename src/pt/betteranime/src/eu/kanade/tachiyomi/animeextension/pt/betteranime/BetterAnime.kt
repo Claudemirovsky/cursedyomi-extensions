@@ -46,10 +46,6 @@ class BetterAnime : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
 
     override val supportsLatest = true
 
-    override val client = network.client.newBuilder()
-        .addInterceptor(LoginInterceptor(network.client, baseUrl, headers))
-        .build()
-
     private val json: Json by injectLazy()
 
     private val preferences by lazy {
@@ -227,7 +223,7 @@ class BetterAnime : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     }
 
     // ============================ Video Links =============================
-    private val extractor by lazy { BetterAnimeExtractor(client, baseUrl, json) }
+    private val extractor by lazy { BetterAnimeExtractor(client, baseUrl) }
 
     override fun videoListParse(response: Response): List<Video> {
         val html = response.body.string()
