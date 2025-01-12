@@ -181,17 +181,14 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
             else -> SAnime.COMPLETED // movie
         }
 
-        val div = document.selectFirst("div.card-body > div.row")!!
+        title = document.selectFirst(".section-title")!!.ownText().substringBefore(" Filminin Bilgileri").substringBefore(" izle")
+        val div = document.selectFirst("div.section-content div.post-info")!!
+        thumbnail_url = div.selectFirst("img")!!.absUrl("data-src")
 
-        div.selectFirst("img")!!.run {
-            thumbnail_url = absUrl("src")
-            title = attr("alt")
-        }
+        genre = div.select("div.post-info-genres > a").eachText().joinToString().takeIf(String::isNotEmpty)
+        artist = div.select("div.post-info-cast > a").eachText().joinToString().takeIf(String::isNotEmpty)
 
-        genre = div.select("div > a[href*=tur/]").eachText().joinToString().takeIf(String::isNotEmpty)
-        artist = div.select("a.chip[href*=oyuncu/]").eachText().joinToString().takeIf(String::isNotEmpty)
-
-        description = div.selectFirst("article > p")?.text()
+        description = div.selectFirst("div.post-info-content > p")?.text()
     }
 
     // ============================== Episodes ==============================
