@@ -54,7 +54,8 @@ class HDFilmCehennemi : ParsedAnimeHttpSource(), ConfigurableAnimeSource {
     }
 
     // ============================== Popular ===============================
-    override fun popularAnimeRequest(page: Int) = GET("$baseUrl/load/page/$page/mostLiked/", apiHeaders)
+    override fun popularAnimeRequest(page: Int) =
+        GET("$baseUrl/load/page/$page/mostLiked/", apiHeaders)
 
     override fun popularAnimeParse(response: Response): AnimesPage {
         val data = response.parseAs<ApiResponse>()
@@ -90,15 +91,18 @@ class HDFilmCehennemi : ParsedAnimeHttpSource(), ConfigurableAnimeSource {
     // =============================== Search ===============================
     override fun getFilterList() = HDFilmCehennemiFilters.FILTER_LIST
 
-    override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage =
-        if (query.startsWith(PREFIX_SEARCH)) { // URL intent handler
-            val id = query.removePrefix(PREFIX_SEARCH)
-            client.newCall(GET("$baseUrl/$id"))
-                .awaitSuccess()
-                .use(::searchAnimeByIdParse)
-        } else {
-            super.getSearchAnime(page, query, filters)
-        }
+    override suspend fun getSearchAnime(
+        page: Int,
+        query: String,
+        filters: AnimeFilterList,
+    ): AnimesPage = if (query.startsWith(PREFIX_SEARCH)) { // URL intent handler
+        val id = query.removePrefix(PREFIX_SEARCH)
+        client.newCall(GET("$baseUrl/$id"))
+            .awaitSuccess()
+            .use(::searchAnimeByIdParse)
+    } else {
+        super.getSearchAnime(page, query, filters)
+    }
 
     private fun searchAnimeByIdParse(response: Response): AnimesPage {
         val details = animeDetailsParse(response.asJsoup()).apply {
@@ -264,7 +268,10 @@ class HDFilmCehennemi : ParsedAnimeHttpSource(), ConfigurableAnimeSource {
         println(url)
         return when {
             url.contains("/rplayer") -> rapidrameExtractor.videosFromUrl(url, name)
-            (name.contains("close") || url.contains("rapidrame")) -> closeloadExtractor.videosFromUrl(url, name)
+            name.contains("close") || url.contains("rapidrame") -> closeloadExtractor.videosFromUrl(
+                url,
+                name,
+            )
             name.contains("vidmoly") -> vidmolyExtractor.videosFromUrl(url, name)
             url.contains("trstx.org") -> xbetExtractor.videosFromUrl(url)
             else -> emptyList()
@@ -305,9 +312,8 @@ class HDFilmCehennemi : ParsedAnimeHttpSource(), ConfigurableAnimeSource {
         ).reversed()
     }
 
-    private fun String.toDate(): Long =
-        runCatching { DATE_FORMATTER.parse(trim())?.time }
-            .getOrNull() ?: 0L
+    private fun String.toDate(): Long = runCatching { DATE_FORMATTER.parse(trim())?.time }
+        .getOrNull() ?: 0L
 
     @Serializable
     private class ApiResponse(
