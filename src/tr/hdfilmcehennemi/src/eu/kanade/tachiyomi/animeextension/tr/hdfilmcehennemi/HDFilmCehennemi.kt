@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.preference.ListPreference
 import androidx.preference.PreferenceScreen
 import eu.kanade.tachiyomi.animeextension.tr.hdfilmcehennemi.extractors.CloseloadExtractor
+import eu.kanade.tachiyomi.animeextension.tr.hdfilmcehennemi.extractors.RapidrameExtractor
 import eu.kanade.tachiyomi.animeextension.tr.hdfilmcehennemi.extractors.VidmolyExtractor
 import eu.kanade.tachiyomi.animeextension.tr.hdfilmcehennemi.extractors.XBetExtractor
 import eu.kanade.tachiyomi.animesource.ConfigurableAnimeSource
@@ -19,7 +20,6 @@ import eu.kanade.tachiyomi.network.await
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.util.asJsoup
 import eu.kanade.tachiyomi.util.parallelCatchingFlatMapBlocking
-import eu.kanade.tachiyomi.util.parallelMapBlocking
 import eu.kanade.tachiyomi.util.parseAs
 import kotlinx.serialization.Serializable
 import okhttp3.FormBody
@@ -34,8 +34,7 @@ import uy.kohesive.injekt.api.get
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
-
+class HDFilmCehennemi : ParsedAnimeHttpSource(), ConfigurableAnimeSource {
     override val name = "HDFilmCehennemi"
 
     override val baseUrl = "https://www.hdfilmcehennemi.nl"
@@ -55,8 +54,7 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     }
 
     // ============================== Popular ===============================
-    override fun popularAnimeRequest(page: Int) =
-        GET("$baseUrl/load/page/$page/mostLiked/", apiHeaders)
+    override fun popularAnimeRequest(page: Int) = GET("$baseUrl/load/page/$page/mostLiked/", apiHeaders)
 
     override fun popularAnimeParse(response: Response): AnimesPage {
         val data = response.parseAs<ApiResponse>()
@@ -92,8 +90,8 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     // =============================== Search ===============================
     override fun getFilterList() = HDFilmCehennemiFilters.FILTER_LIST
 
-    override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage {
-        return if (query.startsWith(PREFIX_SEARCH)) { // URL intent handler
+    override suspend fun getSearchAnime(page: Int, query: String, filters: AnimeFilterList): AnimesPage =
+        if (query.startsWith(PREFIX_SEARCH)) { // URL intent handler
             val id = query.removePrefix(PREFIX_SEARCH)
             client.newCall(GET("$baseUrl/$id"))
                 .awaitSuccess()
@@ -101,7 +99,6 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
         } else {
             super.getSearchAnime(page, query, filters)
         }
-    }
 
     private fun searchAnimeByIdParse(response: Response): AnimesPage {
         val details = animeDetailsParse(response.asJsoup()).apply {
@@ -112,13 +109,14 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
         return AnimesPage(listOf(details), false)
     }
 
-    override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request {
-        return when {
+    override fun searchAnimeRequest(page: Int, query: String, filters: AnimeFilterList): Request =
+        when {
             query.isNotBlank() -> {
                 val body = FormBody.Builder().add("query", query).build()
 
                 POST("$baseUrl/search", apiHeaders, body)
             }
+
             else -> {
                 val params = HDFilmCehennemiFilters.getSearchParameters(filters)
 
@@ -135,13 +133,18 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
                 POST("$baseUrl/movies/load/", headers, form)
             }
         }
-    }
 
     @Serializable
-    data class SearchResponse(val results: List<String>)
+    data class SearchResponse(
+        val results: List<String>,
+    )
 
     @Serializable
-    data class FilterSearchResponse(val html: String, val showMore: Boolean, val status: Int)
+    data class FilterSearchResponse(
+        val html: String,
+        val showMore: Boolean,
+        val status: Int,
+    )
 
     override fun searchAnimeParse(response: Response): AnimesPage {
         return when {
@@ -170,9 +173,7 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
 
     override fun searchAnimeFromElement(element: Element) = popularAnimeFromElement(element)
 
-    override fun searchAnimeNextPageSelector(): String? {
-        throw UnsupportedOperationException()
-    }
+    override fun searchAnimeNextPageSelector(): String? = throw UnsupportedOperationException()
 
     // =========================== Anime Details ============================
     override fun animeDetailsParse(document: Document) = SAnime.create().apply {
@@ -181,12 +182,21 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
             else -> SAnime.COMPLETED // movie
         }
 
-        title = document.selectFirst(".section-title")!!.ownText().substringBefore(" Filminin Bilgileri").substringBefore(" izle")
+        title = document.selectFirst(".section-title")!!
+            .ownText()
+            .substringBefore(" Filminin Bilgileri")
+            .substringBefore(" izle")
         val div = document.selectFirst("div.section-content div.post-info")!!
         thumbnail_url = div.selectFirst("img")!!.absUrl("data-src")
 
-        genre = div.select("div.post-info-genres > a").eachText().joinToString().takeIf(String::isNotEmpty)
-        artist = div.select("div.post-info-cast > a").eachText().joinToString().takeIf(String::isNotEmpty)
+        genre = div.select("div.post-info-genres > a")
+            .eachText()
+            .joinToString()
+            .takeIf(String::isNotEmpty)
+        artist = div.select("div.post-info-cast > a")
+            .eachText()
+            .joinToString()
+            .takeIf(String::isNotEmpty)
 
         description = div.selectFirst("div.post-info-content > p")?.text()
     }
@@ -228,39 +238,44 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     // ============================ Video Links =============================
     private val vidmolyExtractor by lazy { VidmolyExtractor(client, headers) }
     private val closeloadExtractor by lazy { CloseloadExtractor(client, headers) }
+    private val rapidrameExtractor by lazy { RapidrameExtractor(client, headers) }
     private val xbetExtractor by lazy { XBetExtractor(client, headers) }
 
     override fun videoListParse(response: Response): List<Video> {
         val doc = response.asJsoup()
 
-        return doc.select("div.card-body > nav > a:not([href^=#])")
-            .drop(1)
-            .parallelMapBlocking { client.newCall(GET(it.absUrl("href") + "/")).await().asJsoup() }
-            .let { listOf(doc) + it }
-            .mapNotNull { it.selectFirst("div.card-video > iframe") }
-            .map { it.attr("data-src").ifBlank { it.attr("src") } }
-            .filter(String::isNotBlank)
-            .parallelCatchingFlatMapBlocking { url ->
-                when {
-                    url.contains("https://closeload") -> closeloadExtractor.videosFromUrl(url)
-                    url.contains("vidmoly") -> vidmolyExtractor.videosFromUrl(url)
-                    url.contains("trstx.org") -> xbetExtractor.videosFromUrl(url)
-                    else -> emptyList()
-                }
-            }
+        val langTabs = doc.select(videoListSelector())
+
+        return langTabs
+            .flatMap {
+                it.select("button.alternative-link[data-video]")
+                    .map { btn -> Triple(it.attr("data-lang"), btn.text(), btn.attr("data-video")) }
+            }.parallelCatchingFlatMapBlocking(::extractVideos)
     }
 
-    override fun videoListSelector(): String {
-        throw UnsupportedOperationException()
+    private suspend fun extractVideos(info: Triple<String, String, String>): List<Video> {
+        val name = "[${info.first}] ${info.second}"
+        val url = client.newCall(GET("$baseUrl/video/${info.third}/", apiHeaders)).await()
+            .body.string()
+            .substringAfter("src=")
+            .substringBefore(' ')
+            .trim('\\', '"', '\'', ' ')
+            .replace("\\/", "/")
+        println(url)
+        return when {
+            url.contains("/rplayer") -> rapidrameExtractor.videosFromUrl(url, name)
+            (name.contains("close") || url.contains("rapidrame")) -> closeloadExtractor.videosFromUrl(url, name)
+            name.contains("vidmoly") -> vidmolyExtractor.videosFromUrl(url, name)
+            url.contains("trstx.org") -> xbetExtractor.videosFromUrl(url)
+            else -> emptyList()
+        }
     }
 
-    override fun videoFromElement(element: Element): Video {
-        throw UnsupportedOperationException()
-    }
+    override fun videoListSelector() = "div.alternative-tab div.alternative-links[data-lang]"
 
-    override fun videoUrlParse(document: Document): String {
-        throw UnsupportedOperationException()
-    }
+    override fun videoFromElement(element: Element): Video = throw UnsupportedOperationException()
+
+    override fun videoUrlParse(document: Document): String = throw UnsupportedOperationException()
 
     // ============================== Settings ==============================
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
@@ -290,13 +305,14 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
         ).reversed()
     }
 
-    private fun String.toDate(): Long {
-        return runCatching { DATE_FORMATTER.parse(trim())?.time }
+    private fun String.toDate(): Long =
+        runCatching { DATE_FORMATTER.parse(trim())?.time }
             .getOrNull() ?: 0L
-    }
 
     @Serializable
-    private class ApiResponse(val html: String)
+    private class ApiResponse(
+        val html: String,
+    )
 
     companion object {
         const val PREFIX_SEARCH = "id:"
