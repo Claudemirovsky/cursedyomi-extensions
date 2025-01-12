@@ -209,14 +209,14 @@ class HDFilmCehennemi : ConfigurableAnimeSource, ParsedAnimeHttpSource() {
     override fun episodeListParse(response: Response) =
         super.episodeListParse(response).sortedByDescending { it.episode_number }
 
-    override fun episodeListSelector() = "div#seasonsTabs-tabContent div.card-list-item > a"
+    override fun episodeListSelector() = "div.seasons-tabs-wrapper > div.seasons-tab-content > a"
 
     private val numberRegex by lazy { Regex("(\\d+)\\.") }
 
     override fun episodeFromElement(element: Element) = SEpisode.create().apply {
         setUrlWithoutDomain(element.attr("href"))
 
-        name = element.selectFirst("h3")!!.text()
+        name = element.selectFirst("h3, h4")!!.text()
 
         date_upload = element.selectFirst("date")?.attr("datetime")?.toDate() ?: 0L
 
